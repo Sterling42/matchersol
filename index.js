@@ -42,6 +42,8 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
     const publicKey = new PublicKey(address);
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
 
+    console.log(`Token accounts for ${address}:`, tokenAccounts);
+
     if (tokenAccounts.value.length === 0) {
       bot.sendMessage(chatId, `No token holdings found for ${address}`);
       return;
