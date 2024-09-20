@@ -3,7 +3,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { TOKENS } = require('./config');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -29,30 +28,10 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
   try {
     const publicKey = new PublicKey(address);
     const solBalance = await connection.getBalance(publicKey);
-    let response = `Balance of ${address}:\nSOL: ${solBalance} lamports\n`;
+    const balanceSOL = solBalance / 1e9; // Convert lamports to SOL
+    const response = `Balance of ${address}:\nSOL: ${balanceSOL} SOL`;
 
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') });
-
-    for (const tokenAccount of tokenAccounts.value) {
-      const tokenMint = tokenAccount.account.data.parsed.info.mint;
-      const tokenBalance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmountString;
-      const tokenTicker = TOKENS.find(token => token.mint === tokenMint)?.ticker;
-
-      if (tokenTicker) {
-        response += `${tokenTicker}: ${tokenBalance}\n`;
-      }
-    }
-
-    // Split the response into multiple messages if it exceeds Telegram's message length limit
-    const MAX_MESSAGE_LENGTH = 4096;
-    if (response.length > MAX_MESSAGE_LENGTH) {
-      const parts = response.match(/.{1,4096}/g);
-      for (const part of parts) {
-        await bot.sendMessage(chatId, part);
-      }
-    } else {
-      bot.sendMessage(chatId, response);
-    }
+    bot.sendMessage(chatId, response);
   } catch (error) {
     console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
