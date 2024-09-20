@@ -36,8 +36,8 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
     for (const tokenAccount of tokenAccounts.value) {
       const tokenMint = tokenAccount.account.data.parsed.info.mint;
       const tokenBalance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmountString;
-      const tokenName = TOKENS.find(token => token.mint === tokenMint)?.name || tokenMint;
-      response += `${tokenName}: ${tokenBalance}\n`;
+      const tokenTicker = TOKENS.find(token => token.mint === tokenMint)?.ticker || tokenMint;
+      response += `${tokenTicker}: ${tokenBalance}\n`;
     }
 
     // Split the response into multiple messages if it exceeds Telegram's message length limit
