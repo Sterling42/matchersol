@@ -3,7 +3,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { SOL_MINT, USDC_MINT, USDT_MINT } = require('./config');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -28,14 +27,8 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
 
   try {
     const publicKey = new PublicKey(address);
-    const balanceLamports = await connection.getBalance(publicKey);
-    const balanceSOL = balanceLamports / 1e9;
-
-    // Fetch USDC and USDT balances
-    const usdcBalance = await getTokenBalance(publicKey, USDC_MINT);
-    const usdtBalance = await getTokenBalance(publicKey, USDT_MINT);
-
-    bot.sendMessage(chatId, `Balance of ${address}:\nSOL: ${balanceSOL} SOL\nUSDC: ${usdcBalance} USDC\nUSDT: ${usdtBalance} USDT`);
+    const balance = await connection.getBalance(publicKey);
+    bot.sendMessage(chatId, `Balance of ${address}: ${balance} lamports`);
   } catch (error) {
     console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
@@ -55,11 +48,3 @@ app.post(`/bot${token}`, (req, res) => {
 app.listen(port, () => {
   console.log(`Express server is listening on ${port}`);
 });
-
-async function getTokenBalance(publicKey, mintAddress) {
-  const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: new PublicKey(mintAddress) });
-  if (tokenAccounts.value.length === 0) {
-    return 0;
-  }
-  return tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-}
