@@ -40,9 +40,11 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
 
   try {
     const publicKey = new PublicKey(address);
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+    });
 
-    console.log(`Token accounts for ${address}:`, tokenAccounts);
+    console.log(`Token accounts for ${address}:`, JSON.stringify(tokenAccounts, null, 2)); // Log full response for inspection
 
     if (tokenAccounts.value.length === 0) {
       bot.sendMessage(chatId, `No token holdings found for ${address}`);
@@ -51,16 +53,18 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
 
     let response = `Token holdings for ${address}:\n`;
     tokenAccounts.value.forEach(account => {
-      const tokenAmount = account.account.data.parsed.info.tokenAmount.uiAmount;
       const tokenMint = account.account.data.parsed.info.mint;
+      const tokenAmount = account.account.data.parsed.info.tokenAmount.uiAmount;
       response += `Token Mint: ${tokenMint}, Amount: ${tokenAmount}\n`;
     });
 
     bot.sendMessage(chatId, response);
   } catch (error) {
+    console.error(`Error fetching holdings for ${address}:`, error.message); // Log the error
     bot.sendMessage(chatId, `Error: ${error.message}`);
   }
 });
+
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
