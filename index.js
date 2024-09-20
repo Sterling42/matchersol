@@ -56,6 +56,8 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
       },
     ];
 
+    console.log(`Filters:`, filters);
+
     const accounts = await connection.getParsedProgramAccounts(
       TOKEN_PROGRAM_ID, // SPL Token Program
       { filters: filters }
