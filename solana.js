@@ -5,20 +5,24 @@ const { TOKENS } = require('./config');
 const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=87f73015-922d-4549-8eea-3253f7635385', 'confirmed');
 
 async function getBalances(address) {
-  const publicKey = new PublicKey(address);
-  const balanceLamports = await connection.getBalance(publicKey);
-  const balanceSOL = balanceLamports / 1e9;
+  try {
+    const publicKey = new PublicKey(address);
+    const balanceLamports = await connection.getBalance(publicKey);
+    const balanceSOL = balanceLamports / 1e9;
 
-  let balances = `Balance of ${address}:\nSOL: ${balanceSOL} SOL\n`;
+    let balances = `Balance of ${address}:\nSOL: ${balanceSOL} SOL\n`;
 
-  for (const token of TOKENS) {
-    if (token.name !== 'SOL') {
-      const tokenBalance = await getTokenBalance(publicKey, token.mint);
-      balances += `${token.name}: ${tokenBalance} ${token.name}\n`;
+    for (const token of TOKENS) {
+      if (token.name !== 'SOL') {
+        const tokenBalance = await getTokenBalance(publicKey, token.mint);
+        balances += `${token.name}: ${tokenBalance} ${token.name}\n`;
+      }
     }
-  }
 
-  return balances;
+    return balances;
+  } catch (error) {
+    throw new Error('Invalid public key input');
+  }
 }
 
 async function getTokenBalance(publicKey, mintAddress) {
