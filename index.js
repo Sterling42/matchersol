@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { TOKENS } = require('./config');
+const { SOL_MINT, USDC_MINT, USDT_MINT } = require('./config');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -20,7 +20,7 @@ bot.setWebHook(`${url}/bot${token}`);
 const app = express();
 app.use(bodyParser.json());
 
-const connection = new Connection('https://rpc.shyft.to/?api_key=z_6H7yr5crXP_eHJ', 'confirmed');
+const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=87f73015-922d-4549-8eea-3253f7635385', 'confirmed');
 
 bot.onText(/\/balance (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
@@ -31,16 +31,11 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
     const balanceLamports = await connection.getBalance(publicKey);
     const balanceSOL = balanceLamports / 1e9;
 
-    let balances = `Balance of ${address}:\nSOL: ${balanceSOL} SOL\n`;
+    // Fetch USDC and USDT balances
+    const usdcBalance = await getTokenBalance(publicKey, USDC_MINT);
+    const usdtBalance = await getTokenBalance(publicKey, USDT_MINT);
 
-    for (const token of TOKENS) {
-      if (token.name !== 'SOL') {
-        const tokenBalance = await getTokenBalance(publicKey, token.mint);
-        balances += `${token.name}: ${tokenBalance} ${token.name}\n`;
-      }
-    }
-
-    bot.sendMessage(chatId, balances);
+    bot.sendMessage(chatId, `Balance of ${address}:\nSOL: ${balanceSOL} SOL\nUSDC: ${usdcBalance} USDC\nUSDT: ${usdtBalance} USDT`);
   } catch (error) {
     console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
