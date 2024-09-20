@@ -2,7 +2,8 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { Connection, PublicKey } = require('@solana/web3.js');
+const { Connection, PublicKey, GetProgramAccountsFilter } = require('@solana/web3.js');
+const { TOKEN_PROGRAM_ID } = require('@solana/spl-token');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -42,20 +43,39 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
   try {
     const publicKey = new PublicKey(address);
     console.log(`Fetching token accounts for ${address}`);
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
 
-    console.log(`Token accounts for ${address}:`, tokenAccounts);
+    const filters = [
+      {
+        dataSize: 165, // size of account (bytes)
+      },
+      {
+        memcmp: {
+          offset: 32, // location of our query in the account (bytes)
+          bytes: publicKey.toBase58(), // our search criteria, a base58 encoded string
+        },
+      },
+    ];
 
-    if (tokenAccounts.value.length === 0) {
+    const accounts = await connection.getParsedProgramAccounts(
+      TOKEN_PROGRAM_ID, // SPL Token Program
+      { filters: filters }
+    );
+
+    console.log(`Token accounts for ${address}:`, accounts);
+
+    if (accounts.length === 0) {
       bot.sendMessage(chatId, `No token holdings found for ${address}`);
       return;
     }
 
     let response = `Token holdings for ${address}:\n`;
-    tokenAccounts.value.forEach(account => {
-      const tokenAmount = account.account.data.parsed.info.tokenAmount.uiAmount;
-      const tokenMint = account.account.data.parsed.info.mint;
-      response += `Token Mint: ${tokenMint}, Amount: ${tokenAmount}\n`;
+    accounts.forEach((account, i) => {
+      const parsedAccountInfo = account.account.data;
+      const mintAddress = parsedAccountInfo["parsed"]["info"]["mint"];
+      const tokenBalance = parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
+      response += `Token Account No. ${i + 1}: ${account.pubkey.toString()}\n`;
+      response += `--Token Mint: ${mintAddress}\n`;
+      response += `--Token Balance: ${tokenBalance}\n`;
     });
 
     bot.sendMessage(chatId, response);
