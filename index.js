@@ -3,6 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Connection, PublicKey } = require('@solana/web3.js');
+const { TOKENS } = require('./config');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -27,8 +28,15 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
 
   try {
     const publicKey = new PublicKey(address);
-    const balance = await connection.getBalance(publicKey);
-    bot.sendMessage(chatId, `Balance of ${address}: ${balance} lamports`);
+    const solBalance = await connection.getBalance(publicKey);
+    let response = `Balance of ${address}:\nSOL: ${solBalance} lamports\n`;
+
+    for (const token of TOKENS) {
+      const tokenBalance = await connection.getTokenAccountBalance(new PublicKey(token.mint));
+      response += `${token.name}: ${tokenBalance.value.amount} ${tokenBalance.value.uiAmountString}\n`;
+    }
+
+    bot.sendMessage(chatId, response);
   } catch (error) {
     console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
