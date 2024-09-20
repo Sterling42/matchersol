@@ -1,0 +1,30 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local environment files
+.env
+
+# Logs
+logs/
+*.log
+
+# Dependency directories
+jspm_packages/
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Miscellaneous
+.DS_Store
+*.pem
+
+# Debug
+*.tsbuildinfo
+next-env.d.ts
