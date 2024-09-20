@@ -1,0 +1,6 @@
+// config.js
+module.exports = {
+    SOL_MINT: 'So11111111111111111111111111111111111111112',
+    USDC_MINT: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    USDT_MINT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
+  };
