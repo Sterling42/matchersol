@@ -40,7 +40,16 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
       response += `${tokenName}: ${tokenBalance}\n`;
     }
 
-    bot.sendMessage(chatId, response);
+    // Split the response into multiple messages if it exceeds Telegram's message length limit
+    const MAX_MESSAGE_LENGTH = 4096;
+    if (response.length > MAX_MESSAGE_LENGTH) {
+      const parts = response.match(/.{1,4096}/g);
+      for (const part of parts) {
+        await bot.sendMessage(chatId, part);
+      }
+    } else {
+      bot.sendMessage(chatId, response);
+    }
   } catch (error) {
     console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
