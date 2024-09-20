@@ -2,7 +2,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
+const { Connection, PublicKey } = require('@solana/web3.js');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -19,7 +19,7 @@ bot.setWebHook(`${url}/bot${token}`);
 const app = express();
 app.use(bodyParser.json());
 
-const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=87f73015-922d-4549-8eea-3253f7635385', 'confirmed');
 
 bot.onText(/\/balance (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
@@ -30,6 +30,7 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
     const balance = await connection.getBalance(publicKey);
     bot.sendMessage(chatId, `Balance of ${address}: ${balance} lamports`);
   } catch (error) {
+    console.error(`Error fetching balance for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
   }
 });
@@ -40,11 +41,10 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
 
   try {
     const publicKey = new PublicKey(address);
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    });
+    console.log(`Fetching token accounts for ${address}`);
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
 
-    console.log(`Token accounts for ${address}:`, JSON.stringify(tokenAccounts, null, 2)); // Log full response for inspection
+    console.log(`Token accounts for ${address}:`, tokenAccounts);
 
     if (tokenAccounts.value.length === 0) {
       bot.sendMessage(chatId, `No token holdings found for ${address}`);
@@ -53,18 +53,17 @@ bot.onText(/\/holdings (.+)/, async (msg, match) => {
 
     let response = `Token holdings for ${address}:\n`;
     tokenAccounts.value.forEach(account => {
-      const tokenMint = account.account.data.parsed.info.mint;
       const tokenAmount = account.account.data.parsed.info.tokenAmount.uiAmount;
+      const tokenMint = account.account.data.parsed.info.mint;
       response += `Token Mint: ${tokenMint}, Amount: ${tokenAmount}\n`;
     });
 
     bot.sendMessage(chatId, response);
   } catch (error) {
-    console.error(`Error fetching holdings for ${address}:`, error.message); // Log the error
+    console.error(`Error fetching token holdings for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
   }
 });
-
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
