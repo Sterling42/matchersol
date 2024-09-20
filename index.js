@@ -34,9 +34,35 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
   }
 });
 
+bot.onText(/\/holdings (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const address = match[1];
+
+  try {
+    const publicKey = new PublicKey(address);
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
+
+    if (tokenAccounts.value.length === 0) {
+      bot.sendMessage(chatId, `No token holdings found for ${address}`);
+      return;
+    }
+
+    let response = `Token holdings for ${address}:\n`;
+    tokenAccounts.value.forEach(account => {
+      const tokenAmount = account.account.data.parsed.info.tokenAmount.uiAmount;
+      const tokenMint = account.account.data.parsed.info.mint;
+      response += `Token Mint: ${tokenMint}, Amount: ${tokenAmount}\n`;
+    });
+
+    bot.sendMessage(chatId, response);
+  } catch (error) {
+    bot.sendMessage(chatId, `Error: ${error.message}`);
+  }
+});
+
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome to the Solana Telegram Bot! Use /balance <address> to check the balance of a Solana address.');
+  bot.sendMessage(chatId, 'Welcome to the Solana Telegram Bot! Use /balance <address> to check the balance of a Solana address. Use /holdings <address> to check the token holdings of a Solana address.');
 });
 
 app.post(`/bot${token}`, (req, res) => {
