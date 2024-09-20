@@ -31,9 +31,13 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
     const solBalance = await connection.getBalance(publicKey);
     let response = `Balance of ${address}:\nSOL: ${solBalance} lamports\n`;
 
-    for (const token of TOKENS) {
-      const tokenBalance = await connection.getTokenAccountBalance(new PublicKey(token.mint));
-      response += `${token.name}: ${tokenBalance.value.amount} ${tokenBalance.value.uiAmountString}\n`;
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') });
+
+    for (const tokenAccount of tokenAccounts.value) {
+      const tokenMint = tokenAccount.account.data.parsed.info.mint;
+      const tokenBalance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmountString;
+      const tokenName = TOKENS.find(token => token.mint === tokenMint)?.name || tokenMint;
+      response += `${tokenName}: ${tokenBalance}\n`;
     }
 
     bot.sendMessage(chatId, response);
