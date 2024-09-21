@@ -22,6 +22,20 @@ app.use(bodyParser.json());
 
 const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=87f73015-922d-4549-8eea-3253f7635385', 'confirmed');
 
+const tokenMetadataCache = new Map();
+
+async function getTokenSymbol(mintPublicKey) {
+  if (tokenMetadataCache.has(mintPublicKey.toString())) {
+    return tokenMetadataCache.get(mintPublicKey.toString());
+  }
+
+  const mintInfo = await connection.getParsedAccountInfo(mintPublicKey);
+  const tokenSymbol = mintInfo.value.data.parsed.info.symbol || 'Unknown';
+  tokenMetadataCache.set(mintPublicKey.toString(), tokenSymbol);
+
+  return tokenSymbol;
+}
+
 bot.onText(/\/balance (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const address = match[1];
@@ -30,17 +44,18 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
     const publicKey = new PublicKey(address);
     const tokenAccounts = await connection.getTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
 
+    const tokenAccountPubkeys = tokenAccounts.value.map(tokenAccount => tokenAccount.pubkey);
+    const tokenAccountInfos = await connection.getMultipleAccountsInfo(tokenAccountPubkeys);
+
     let response = `Balances of ${address}:\n`;
 
-    for (const tokenAccount of tokenAccounts.value) {
-      const accountInfo = AccountLayout.decode(tokenAccount.account.data);
+    for (let i = 0; i < tokenAccountInfos.length; i++) {
+      const accountInfo = AccountLayout.decode(tokenAccountInfos[i].data);
       const mintPublicKey = new PublicKey(accountInfo.mint);
-      const tokenBalance = await connection.getTokenAccountBalance(tokenAccount.pubkey);
+      const tokenBalance = await connection.getTokenAccountBalance(tokenAccountPubkeys[i]);
       const tokenAmount = tokenBalance.value.uiAmount;
 
-      // Fetch token mint information (e.g., ticker symbol)
-      const mintInfo = await connection.getParsedAccountInfo(mintPublicKey);
-      const tokenSymbol = mintInfo.value.data.parsed.info.symbol || 'Unknown';
+      const tokenSymbol = await getTokenSymbol(mintPublicKey);
 
       response += `${tokenSymbol}: ${tokenAmount}\n`;
     }
