@@ -3,6 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Connection, PublicKey } = require('@solana/web3.js');
+const { TOKEN_PROGRAM_ID, AccountLayout } = require('@solana/spl-token');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const url = process.env.WEBHOOK_URL;
@@ -27,13 +28,26 @@ bot.onText(/\/balance (.+)/, async (msg, match) => {
 
   try {
     const publicKey = new PublicKey(address);
-    const solBalance = await connection.getBalance(publicKey);
-    const balanceSOL = solBalance / 1e9; // Convert lamports to SOL
-    const response = `Balance of ${address}:\nSOL: ${balanceSOL} SOL`;
+    const tokenAccounts = await connection.getTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
+
+    let response = `Balances of ${address}:\n`;
+
+    for (const tokenAccount of tokenAccounts.value) {
+      const accountInfo = AccountLayout.decode(tokenAccount.account.data);
+      const mintPublicKey = new PublicKey(accountInfo.mint);
+      const tokenBalance = await connection.getTokenAccountBalance(tokenAccount.pubkey);
+      const tokenAmount = tokenBalance.value.uiAmount;
+
+      // Fetch token mint information (e.g., ticker symbol)
+      const mintInfo = await connection.getParsedAccountInfo(mintPublicKey);
+      const tokenSymbol = mintInfo.value.data.parsed.info.symbol || 'Unknown';
+
+      response += `${tokenSymbol}: ${tokenAmount}\n`;
+    }
 
     bot.sendMessage(chatId, response);
   } catch (error) {
-    console.error(`Error fetching balance for ${address}:`, error);
+    console.error(`Error fetching balances for ${address}:`, error);
     bot.sendMessage(chatId, `Error: ${error.message}`);
   }
 });
